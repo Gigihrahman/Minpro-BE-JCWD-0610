@@ -33,7 +33,7 @@ model Events {
   location    Locations  @relation(fields: [locationId], references: [id])
   eventName   String
   eventImage  String
-  description String
+  description String     @db.Text
   startEvent  DateTime   @default(now())
   endEvent    DateTime
   slug        String
@@ -71,7 +71,7 @@ model Coupons {
   userId      Int
   user        Users    @relation(fields: [userId], references: [id])
   couponCode  String
-  isUsed      String
+  isUsed      Boolean  @default(false)
   discount    Int
   expiredDate DateTime
   createdAt   DateTime @default(now())
@@ -98,24 +98,25 @@ model Payments {
 }
 
 model Transactions {
-  id                Int               @id @default(autoincrement())
+  id                Int                 @id @default(autoincrement())
+  uuid              String              @unique @default(uuid())
   eventId           Int
   userId            Int
   voucherId         Int?
-  voucher           Vouchers          @relation(fields: [vouchersId], references: [id])
+  voucher           Vouchers            @relation(fields: [vouchersId], references: [id])
   couponId          Int?
-  coupon            Coupons           @relation(fields: [couponsId], references: [id])
-  pointsId          Int
-  points            Points            @relation(fields: [pointsId], references: [id])
-  transactionStatus TransactionStatus @default(WAITING_FOR_PAYMENT)
+  coupon            Coupons             @relation(fields: [couponsId], references: [id])
+  usedPoint         Int?
+  transactionStatus TransactionStatus   @default(WAITING_FOR_PAYMENT)
   totalPrice        Int
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
   payments          Payments[]
-
   detailTransaction DetailTransaction[]
   vouchersId        Int
   couponsId         Int
+  Points            Points?             @relation(fields: [pointsId], references: [id])
+  pointsId          Int?
 
   @@map("transactions")
 }
@@ -131,6 +132,7 @@ enum TransactionStatus {
 
 model DetailTransaction {
   id              Int          @id @default(autoincrement())
+  uuid            String       @unique @default(uuid())
   transactionId   Int
   transaction     Transactions @relation(fields: [transactionId], references: [id])
   seatsId         Int
@@ -188,7 +190,6 @@ model Referrals {
   referer        Users    @relation("RefererRel", fields: [refererUserId], references: [id])
   referredUserId Int
   referred       Users    @relation("ReferredRel", fields: [referredUserId], references: [id])
-  expiredAt      DateTime
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -200,8 +201,9 @@ model Users {
   fullName            String
   email               String              @unique
   password            String
-  profilePicture      String?             @default("Null")
+  profilePicture      String?
   phoneNumber         String
+  tokenreset          String?
   role                Role                @default(USER)
   referalCode         String
   createdAt           DateTime            @default(now())
@@ -233,6 +235,7 @@ model Vouchers {
   eventId      Int
   event        Events         @relation(fields: [eventId], references: [id])
   code         String         @unique
+  claimed      Int            @default(0)
   quota        Int
   value        Int
   validAt      DateTime

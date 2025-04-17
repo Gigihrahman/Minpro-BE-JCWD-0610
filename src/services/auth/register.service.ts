@@ -8,8 +8,8 @@ import dayjs from "dayjs";
 interface RegisterPayload extends Users {
   referralCodeUsed?: string;
 }
+
 export const registerService = async (body: RegisterPayload) => {
-  
   const existingEmail = await prisma.users.findFirst({
     where: { email: body.email },
   });
@@ -18,8 +18,9 @@ export const registerService = async (body: RegisterPayload) => {
     throw new ApiError("Email already exists", 400);
   }
 
-  const hashedPassword = await hashPassword(body.password);
+  body.referralCodeUsed = body.referralCodeUsed?.trim();
 
+  const hashedPassword = await hashPassword(body.password);
   const referralCode = nanoid(10);
 
   const result = await prisma.$transaction(async (tx) => {
@@ -41,7 +42,7 @@ export const registerService = async (body: RegisterPayload) => {
           password: hashedPassword,
           phoneNumber: body.phoneNumber,
           profilePicture: body.profilePicture,
-          role: body.role ?? "USER",
+          role: body.role,
           referalCode: referralCode,
         },
       });
@@ -50,7 +51,23 @@ export const registerService = async (body: RegisterPayload) => {
         data: {
           refererUserId: refererUser.id,
           referredUserId: newUser.id,
-          expiredAt: dayjs().add(3, "months").toDate(),
+        },
+      });
+
+      await tx.coupons.create({
+        data: {
+          userId: newUser.id,
+          couponCode: `DISKON-${nanoid(6).toUpperCase()}`,
+          discount: 20000,
+          expiredDate: dayjs().add(3, "month").toDate(),
+        },
+      });
+
+      await tx.points.create({
+        data: {
+          userId: refererUser.id,
+          pointsValue: 10000,
+          expiredDate: dayjs().add(3, "month").toDate(),
         },
       });
     } else {
@@ -61,7 +78,7 @@ export const registerService = async (body: RegisterPayload) => {
           password: hashedPassword,
           phoneNumber: body.phoneNumber,
           profilePicture: body.profilePicture,
-          role: body.role ?? "USER",
+          role: body.role,
           referalCode: referralCode,
         },
       });
