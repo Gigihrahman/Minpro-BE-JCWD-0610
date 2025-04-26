@@ -1,14 +1,8 @@
-import type {
-  Coupons,
-  DetailTransaction,
-  Seats,
-  Transactions,
-  Vouchers,
-} from "@prisma/client";
-import prisma from "../../config/prisma";
-import { ApiError } from "../../utils/api-error";
-import { userTransactionQueue } from "../../jobs/queues/transaction.queue";
+import type { Coupons, Vouchers } from "@prisma/client";
 import { DELAYED_JOB } from "../../config/env";
+import prisma from "../../config/prisma";
+import { userTransactionQueue } from "../../jobs/queues/transaction.queue";
+import { ApiError } from "../../utils/api-error";
 
 interface TransactionItem {
   id: number;
