@@ -9,9 +9,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Sample {
@@ -24,46 +23,49 @@ model Sample {
 }
 
 model Events {
-  id          Int        @id @default(autoincrement())
-  categoryId  Int
-  category    Categories @relation(fields: [categoryId], references: [id])
-  organizerId Int
-  organizer   Organizer  @relation(fields: [organizerId], references: [id])
-  locationId  Int
-  location    Locations  @relation(fields: [locationId], references: [id])
-  eventName   String
-  eventImage  String
-  description String     @db.Text
-  startEvent  DateTime   @default(now())
-  endEvent    DateTime
-  slug        String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  seats       Seats[]
-  vouchers    Vouchers[]
-  reviews     Reviews[]
+  id             Int        @id @default(autoincrement())
+  categoryId     Int
+  category       Categories @relation(fields: [categoryId], references: [id])
+  organizerId    Int
+  organizer      Organizer  @relation(fields: [organizerId], references: [id])
+  cityId         Int
+  city           City       @relation(fields: [cityId], references: [id])
+  locationDetail String
+  name           String
+  image          String
+  description    String     @db.Text
+  startEvent     DateTime   @default(now())
+  endEvent       DateTime
+  slug           String
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  deletedAt      DateTime?
+  seats          Seats[]
+  vouchers       Vouchers[]
+  reviews        Reviews[]
 
   @@map("events")
 }
 
 model Categories {
-  id           Int      @id @default(autoincrement())
-  categoryName String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  events       Events[]
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  events      Events[]
 
   @@map("categories")
 }
 
-model Locations {
+model City {
   id        Int      @id @default(autoincrement())
-  city      String
+  name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   events    Events[]
 
-  @@map("locations")
+  @@map("cities")
 }
 
 model Coupons {
@@ -71,8 +73,10 @@ model Coupons {
   userId      Int
   user        Users    @relation(fields: [userId], references: [id])
   couponCode  String
+  name        String
   isUsed      Boolean  @default(false)
   discount    Int
+  isExpired   Boolean  @default(false)
   expiredDate DateTime
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -87,10 +91,8 @@ model Payments {
   transactionId   Int
   transaction     Transactions @relation(fields: [transactionId], references: [id])
   paymentMethod   String
-  paymentStatus   String
   amount          Int
   paymentProofUrl String
-  paymentProof    Boolean
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
@@ -100,22 +102,21 @@ model Payments {
 model Transactions {
   id                Int                 @id @default(autoincrement())
   uuid              String              @unique @default(uuid())
-  eventId           Int
   userId            Int
+  voucher_amount    Int?
   voucherId         Int?
-  voucher           Vouchers            @relation(fields: [vouchersId], references: [id])
+  voucher           Vouchers?           @relation(fields: [voucherId], references: [id])
+  coupoun_amount    Int?
   couponId          Int?
-  coupon            Coupons             @relation(fields: [couponsId], references: [id])
+  coupon            Coupons?            @relation(fields: [couponId], references: [id])
   usedPoint         Int?
-  transactionStatus TransactionStatus   @default(WAITING_FOR_PAYMENT)
+  status            TransactionStatus   @default(WAITING_FOR_PAYMENT)
   totalPrice        Int
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   payments          Payments[]
   detailTransaction DetailTransaction[]
-  vouchersId        Int
-  couponsId         Int
-  Points            Points?             @relation(fields: [pointsId], references: [id])
+  points            Points?             @relation(fields: [pointsId], references: [id])
   pointsId          Int?
 
   @@map("transactions")
@@ -136,6 +137,7 @@ model DetailTransaction {
   transactionId   Int
   transaction     Transactions @relation(fields: [transactionId], references: [id])
   seatsId         Int
+  seats           Seats        @relation(fields: [seatsId], references: [id])
   quantity        Int
   priceAtPurchase Int
   createdAt       DateTime     @default(now())
@@ -147,16 +149,19 @@ model DetailTransaction {
 }
 
 model Seats {
-  id        Int       @id @default(autoincrement())
-  eventId   Int
-  event     Events    @relation(fields: [eventId], references: [id])
-  name      String
-  quota     Int
-  reserved  DateTime
-  price     Int
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  tickets   Tickets[]
+  id                 Int                 @id @default(autoincrement())
+  eventId            Int
+  event              Events              @relation(fields: [eventId], references: [id])
+  name               String
+  description        String              @db.Text
+  totalSeat          Int
+  reserved           Int                 @default(0)
+  price              Int
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  deletedAt          DateTime?
+  tickets            Tickets[]
+  detailTransactions DetailTransaction[]
 
   @@map("seats")
 }
@@ -170,16 +175,18 @@ model NotificationsUser {
   isRead          Boolean       @default(false)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+
+  @@map("notifications_user")
 }
 
 model Notifications {
-  id                Int                 @id @default(autoincrement())
-  userId            Int
-  user              Users               @relation(fields: [userId], references: [id])
-  message           String
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  NotificationsUser NotificationsUser[]
+  id                 Int                 @id @default(autoincrement())
+  userId             Int
+  user               Users               @relation(fields: [userId], references: [id])
+  message            String
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  notificationsUsers NotificationsUser[]
 
   @@map("notifications")
 }
@@ -217,7 +224,7 @@ model Users {
   reviews             Reviews[]
   tickets             Tickets[]
   organizer           Organizer[]
-  NotificationsUser   NotificationsUser[]
+  notificationsUsers  NotificationsUser[]
 
   @@map("users")
 }
@@ -232,9 +239,11 @@ model Vouchers {
   id           Int            @id @default(autoincrement())
   organizerId  Int
   organizer    Organizer      @relation(fields: [organizerId], references: [id])
+  voucherCode  String         @unique @default(uuid())
   eventId      Int
   event        Events         @relation(fields: [eventId], references: [id])
   code         String         @unique
+  description  String         @db.Text
   claimed      Int            @default(0)
   quota        Int
   value        Int
@@ -242,6 +251,7 @@ model Vouchers {
   expiredAt    DateTime
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+  deletedAt    DateTime?
   transactions Transactions[]
 
   @@map("vouchers")
@@ -249,7 +259,7 @@ model Vouchers {
 
 model Points {
   id           Int            @id @default(autoincrement())
-  userId       Int
+  userId       Int            @unique
   user         Users          @relation(fields: [userId], references: [id])
   pointsValue  Int
   expiredDate  DateTime
@@ -269,7 +279,7 @@ model Reviews {
   detailTransactionId Int
   detailTransaction   DetailTransaction @relation(fields: [detailTransactionId], references: [id])
   rating              Int
-  comment             String
+  comment             String            @db.Text
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
@@ -295,9 +305,12 @@ model Organizer {
   userId         Int
   user           Users      @relation(fields: [userId], references: [id])
   name           String
-  profilePicture String
+  profilePicture String?
   phoneNumber    String
   npwp           String
+  accNumber      Int?
+  bankName       String?
+  isVerified     Boolean    @default(false)
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
   deletedAt      DateTime?

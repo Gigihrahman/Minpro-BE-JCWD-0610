@@ -2,7 +2,7 @@ import express from "express";
 import { errorMiddleware } from "./middlewares/error.middleware";
 import authRouter from "./routes/auth.router";
 import cors from "cors";
-
+import "./jobs";
 const app = express();
 app.use(cors());
 app.use(express.json());
