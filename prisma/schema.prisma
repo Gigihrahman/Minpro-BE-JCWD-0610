@@ -91,7 +91,6 @@ model Payments {
   transactionId   Int
   transaction     Transactions @relation(fields: [transactionId], references: [id])
   paymentMethod   String
-  amount          Int
   paymentProofUrl String
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
